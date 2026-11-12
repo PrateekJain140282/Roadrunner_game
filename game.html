@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BEEP BEEP! Road Runner Chase</title>
 <link rel="manifest" id="manifest-link" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
@@ -27,6 +27,9 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
   position: relative;
 }
 
@@ -280,6 +283,7 @@ body {
   padding: 13px 0;
   width: 100%;
   cursor: pointer;
+  touch-action: auto;
   border-bottom: 5px solid #a33000;
   transition: transform 0.08s, border-bottom 0.08s, opacity 0.2s;
 }
@@ -441,6 +445,7 @@ body {
   border-radius: 18px;
   padding: 14px 8px 12px;
   cursor: pointer;
+  touch-action: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1502,6 +1507,24 @@ function endTurn() {
 
 // ── SCALE TO FIT VIEWPORT ─────────────────────────────────
 let naturalGameW = 0, naturalGameH = 0;
+let userScale = 1, panX = 0, panY = 0;
+
+function applyTransform() {
+  const gw = document.getElementById('game-wrapper');
+  if (!naturalGameW) return;
+  const ts = currentScale * userScale;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const sw = naturalGameW * ts, sh = naturalGameH * ts;
+  const maxPX = Math.max(0, (sw - vw) / 2);
+  const maxPY = Math.max(0, (sh - vh) / 2);
+  panX = Math.max(-maxPX, Math.min(maxPX, panX));
+  panY = Math.max(-maxPY, Math.min(maxPY, panY));
+  gw.style.transformOrigin = 'top left';
+  gw.style.transform = `scale(${ts})`;
+  gw.style.left = ((vw - sw) / 2 + panX) + 'px';
+  gw.style.top  = ((vh - sh) / 2 + panY) + 'px';
+}
+
 function scaleGame() {
   const w = document.getElementById('game-wrapper');
   if (!naturalGameW) {
@@ -1517,12 +1540,10 @@ function scaleGame() {
   if (!naturalGameW) return;
   const s = Math.min(window.innerWidth / naturalGameW, window.innerHeight / naturalGameH);
   currentScale = s;
+  userScale = 1; panX = 0; panY = 0;
   w.style.width  = naturalGameW + 'px';
   w.style.height = naturalGameH + 'px';
-  w.style.transformOrigin = 'top left';
-  w.style.transform = 'scale(' + s + ')';
-  w.style.left = Math.max(0, (window.innerWidth  - naturalGameW * s) / 2) + 'px';
-  w.style.top  = Math.max(0, (window.innerHeight - naturalGameH * s) / 2) + 'px';
+  applyTransform();
 }
 
 window.addEventListener('resize', () => { naturalGameW=0; scaleGame(); computeSpacePositions(); renderTokens(); });
@@ -1544,6 +1565,78 @@ document.addEventListener('fullscreenchange', () => {
   naturalGameW = 0;
   setTimeout(() => { scaleGame(); computeSpacePositions(); renderTokens(); }, 120);
 });
+
+// ── TOUCH ZOOM + PAN ──────────────────────────────────────
+(function() {
+  let pinchDist0 = 0, pinchCX = 0, pinchCY = 0;
+  let dragActive = false, dragX = 0, dragY = 0;
+  let lastTap = 0;
+
+  function dist2(t) {
+    const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      pinchDist0 = dist2(e.touches);
+      pinchCX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      pinchCY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      dragActive = false;
+      e.preventDefault();
+    } else if (e.touches.length === 1) {
+      dragX = e.touches[0].clientX;
+      dragY = e.touches[0].clientY;
+      dragActive = userScale > 1.05;
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+      const d = dist2(e.touches);
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      if (pinchDist0) {
+        userScale = Math.max(1, Math.min(5, userScale * d / pinchDist0));
+        panX += cx - pinchCX;
+        panY += cy - pinchCY;
+      }
+      pinchDist0 = d; pinchCX = cx; pinchCY = cy;
+      applyTransform();
+      e.preventDefault();
+    } else if (e.touches.length === 1 && dragActive) {
+      panX += e.touches[0].clientX - dragX;
+      panY += e.touches[0].clientY - dragY;
+      dragX = e.touches[0].clientX;
+      dragY = e.touches[0].clientY;
+      applyTransform();
+      if (e.cancelable) e.preventDefault();
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', e => {
+    if (e.touches.length < 2) pinchDist0 = 0;
+    if (e.touches.length === 0) {
+      dragActive = false;
+      // snap back if zoomed nearly to 1
+      if (userScale < 1.1) { userScale = 1; panX = 0; panY = 0; applyTransform(); }
+      // double-tap: zoom 2.5x in / reset
+      const now = Date.now();
+      if (now - lastTap < 280 && e.changedTouches.length === 1) {
+        if (userScale > 1.1) {
+          userScale = 1; panX = 0; panY = 0;
+        } else {
+          userScale = 2.5;
+          const t = e.changedTouches[0];
+          panX = (window.innerWidth  / 2 - t.clientX) * 1.5;
+          panY = (window.innerHeight / 2 - t.clientY) * 1.5;
+        }
+        applyTransform();
+      }
+      lastTap = now;
+    }
+  }, { passive: true });
+})();
 
 initGame();
 scaleGame();
