@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BEEP BEEP! Road Runner Chase</title>
+<link rel="manifest" id="manifest-link" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Beep Beep!">
+<meta name="theme-color" content="#FF6820">
+<link rel="apple-touch-icon" id="apple-touch-icon" href="icon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  height: 100%;
+  overflow: hidden;
+  background: white;
+}
+
+body {
+  background: white;
+  font-family: 'Nunito', sans-serif;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+#game-wrapper {
+  position: absolute;
+  transform-origin: top left;
+  overflow: hidden;
+}
+
+/* ── TITLE ─────────────────────────────────────────── */
+#title-bar {
+  background: linear-gradient(135deg, #FF8C00 0%, #d94f00 100%);
+  padding: 10px 24px;
+  text-align: center;
+  border-bottom: 5px solid #a33000;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+}
+#title-bar h1 {
+  font-family: 'Bangers', cursive;
+  font-size: 52px;
+  color: #fff;
+  letter-spacing: 6px;
+  text-shadow: 3px 3px 0 #5a1500;
+  line-height: 1;
+}
+#title-bar p {
+  font-size: 14px;
+  color: rgba(255,255,255,0.9);
+  font-weight: 800;
+  margin-top: 2px;
+  letter-spacing: 1px;
+}
+#title-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 7px;
+}
+#title-btns button {
+  font-family: 'Bangers', cursive;
+  font-size: 16px;
+  letter-spacing: 1px;
+  padding: 6px 18px;
+  border-radius: 8px;
+  border: 3px solid rgba(0,0,0,0.25);
+  cursor: pointer;
+  background: rgba(255,255,255,0.18);
+  color: white;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+  transition: background 0.15s, transform 0.1s;
+}
+#title-btns button:hover { background: rgba(255,255,255,0.32); transform: translateY(-1px); }
+#title-btns button:active { transform: translateY(1px); }
+
+/* ── MAIN LAYOUT ───────────────────────────────────── */
+#main {
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
+  align-items: flex-start;
+}
+
+/* ── BOARD ─────────────────────────────────────────── */
+#board-section { flex: 0 0 auto; }
+
+#board-container {
+  position: relative;
+  display: inline-block;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(8, 120px);
+  grid-template-rows: repeat(6, 104px);
+  gap: 5px;
+  background: #C8A45A;
+  padding: 8px;
+  border-radius: 20px;
+  border: 5px solid #A07030;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.2);
+}
+
+.space {
+  border-radius: 13px;
+  border: 2.5px solid rgba(0,0,0,0.12);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: transform 0.12s, box-shadow 0.12s;
+  cursor: default;
+  overflow: hidden;
+}
+.space:hover {
+  transform: scale(1.05);
+  box-shadow: 0 5px 16px rgba(0,0,0,0.2);
+  z-index: 5;
+}
+.space .num {
+  position: absolute;
+  top: 4px; left: 7px;
+  font-family: 'Bangers', cursive;
+  font-size: 15px;
+  opacity: 0.55;
+  line-height: 1;
+}
+.space .slabel {
+  font-family: 'Bangers', cursive;
+  font-size: 16px;
+  margin-top: 2px;
+  line-height: 1;
+}
+
+/* Space colours */
+.sp-open   { background: #FFF3D4; border-color: #E8D090; }
+.sp-green  { background: #C8F5A0; border-color: #7DC843; }
+.sp-red    { background: #FFB3A0; border-color: #FF6040; }
+.sp-blue   { background: #B3DEFF; border-color: #40A0F5; }
+.sp-start  { background: linear-gradient(135deg,#5DBF2A,#7ED321); border-color: #4A9E18; }
+.sp-finish { background: linear-gradient(135deg,#FFD700,#FFAA00); border-color: #E09000; }
+.sp-gold   { background: #FFF3A0; border-color: #D4A000; }
+.sp-purple { background: #E8D0FF; border-color: #9050C0; }
+.sp-orange { background: #FFE0B0; border-color: #FF8C00; }
+.sp-pink   { background: #FFD6EC; border-color: #E8407A; }
+.sp-teal   { background: #B0F0F0; border-color: #009090; }
+
+/* Tokens */
+.token {
+  position: absolute;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  padding: 3px;
+  border: 3px solid rgba(255,255,255,0.9);
+  box-shadow: 0 3px 14px rgba(0,0,0,0.45);
+  transition: left 0.28s cubic-bezier(.4,0,.2,1), top 0.28s cubic-bezier(.4,0,.2,1);
+  z-index: 20;
+  pointer-events: none;
+}
+#token-rr     { background: radial-gradient(circle at 40% 35%, #7788EE, #2244BB); }
+#token-coyote { background: radial-gradient(circle at 40% 35%, #DDAA55, #8B5E3C); }
+
+/* Legend under board */
+#legend {
+  display: flex;
+  gap: 16px;
+  padding: 11px 4px 0 4px;
+  flex-wrap: wrap;
+}
+.leg {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #666;
+}
+.leg-dot {
+  width: 26px; height: 26px;
+  border-radius: 7px;
+  border: 2px solid rgba(0,0,0,0.12);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── RIGHT PANEL ───────────────────────────────────── */
+#panel {
+  flex: 0 0 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.pcard {
+  background: #fff;
+  border-radius: 18px;
+  padding: 15px 16px;
+  border: 2.5px solid #E8D5A0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+.pcard h3 {
+  font-family: 'Bangers', cursive;
+  font-size: 15px;
+  letter-spacing: 1.5px;
+  color: #AAA;
+  margin-bottom: 9px;
+  text-transform: uppercase;
+}
+
+/* Turn display */
+#turn-box {
+  text-align: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 3px solid;
+  transition: background 0.3s, border-color 0.3s;
+}
+#turn-box.t-rr     { background: linear-gradient(135deg,#e8f4ff,#c8e6ff); border-color: #4A90D9; }
+#turn-box.t-coyote { background: linear-gradient(135deg,#fff4e0,#ffe0b0); border-color: #FF8C00; }
+
+.char-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+#turn-box .pname {
+  font-family: 'Bangers', cursive;
+  font-size: 24px;
+  letter-spacing: 2.5px;
+  margin-top: 2px;
+}
+#turn-box.t-rr     .pname { color: #4A90D9; }
+#turn-box.t-coyote .pname { color: #FF8C00; }
+#turn-box .pprompt {
+  font-size: 13px;
+  font-weight: 800;
+  color: #888;
+  margin-top: 3px;
+}
+
+/* Die */
+#die-area { text-align: center; }
+#die-face {
+  display: block;
+  font-size: 68px;
+  line-height: 1;
+  margin-bottom: 10px;
+  min-height: 72px;
+}
+#die-face.shake { animation: shake 0.38s ease; }
+@keyframes shake {
+  0%  { transform: rotate(0)   scale(1); }
+  15% { transform: rotate(-18deg) scale(1.25); }
+  30% { transform: rotate(14deg)  scale(1.18); }
+  50% { transform: rotate(-8deg)  scale(1.08); }
+  70% { transform: rotate(5deg)   scale(1.03); }
+  100%{ transform: rotate(0)   scale(1); }
+}
+
+#roll-btn {
+  font-family: 'Bangers', cursive;
+  font-size: 26px;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #FF8C00, #d94f00);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 13px 0;
+  width: 100%;
+  cursor: pointer;
+  border-bottom: 5px solid #a33000;
+  transition: transform 0.08s, border-bottom 0.08s, opacity 0.2s;
+}
+#roll-btn:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 2px; }
+#roll-btn:disabled { background: #ddd; border-bottom-color: #bbb; cursor: not-allowed; opacity: 0.55; }
+
+/* Catches */
+#catches-wrap { text-align: center; }
+#catch-icons { font-size: 38px; letter-spacing: 8px; }
+#catch-label { font-size: 12px; color: #aaa; font-weight: 800; margin-top: 3px; }
+
+/* ── GAME OVER OVERLAY ─────────────────────────────── */
+#overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75); z-index: 300;
+  align-items: center; justify-content: center;
+}
+#overlay.show { display: flex; }
+#win-box {
+  background: #fff; border-radius: 28px;
+  padding: 48px 64px; text-align: center;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.45);
+  animation: popIn 0.4s ease;
+}
+@keyframes popIn {
+  0%  { transform: scale(0.45); opacity: 0; }
+  70% { transform: scale(1.12); }
+  100%{ transform: scale(1);    opacity: 1; }
+}
+.win-char { width: 110px; height: 130px; margin: 0 auto 10px; }
+#win-box h2 {
+  font-family: 'Bangers', cursive; font-size: 54px;
+  letter-spacing: 4px; margin: 6px 0;
+}
+#win-box .wsub { font-size: 18px; font-weight: 800; color: #777; margin-bottom: 28px; }
+#pa-btn {
+  font-family: 'Bangers', cursive; font-size: 30px;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg,#FF8C00,#d94f00);
+  color: #fff; border: none; border-radius: 16px;
+  padding: 15px 48px; cursor: pointer;
+  border-bottom: 5px solid #a33000; transition: transform 0.1s;
+}
+#pa-btn:hover { transform: scale(1.06); }
+
+/* Catch flash */
+@keyframes cflash {
+  0%,100% { border-color: #A07030; }
+  25%,75% { border-color: #ff2222; box-shadow: 0 0 32px rgba(255,0,0,0.5); }
+}
+.cflash { animation: cflash 0.55s ease; }
+
+/* ── BANNER TOAST ─────────────────────────────────────────── */
+#banner {
+  position: fixed;
+  top: -90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #9966CC;
+  color: white;
+  font-family: 'Bangers', cursive;
+  font-size: 30px;
+  letter-spacing: 2px;
+  padding: 16px 36px;
+  border-radius: 14px;
+  border: 4px solid rgba(0,0,0,0.25);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+  z-index: 1000;
+  transition: top 0.42s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+  pointer-events: none;
+}
+#banner.show { top: 16px; }
+
+/* ── CONFETTI ─────────────────────────────────────────────── */
+@keyframes confettiFall {
+  0%   { opacity: 1; transform: rotate(0deg) translateX(0); }
+  100% { opacity: 0; transform: rotate(720deg) translateX(var(--drift)); top: 110vh; }
+}
+.confetti-piece {
+  position: fixed;
+  z-index: 9997;
+  pointer-events: none;
+  animation: confettiFall var(--dur) ease-in var(--delay) forwards;
+}
+
+/* ── SPACE PULSE on landing ───────────────────────────────── */
+@keyframes spacePulse {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 rgba(255,255,255,0); }
+  40%  { transform: scale(1.2);  box-shadow: 0 0 22px rgba(255,255,255,0.95); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 rgba(255,255,255,0); }
+}
+.space.landed { animation: spacePulse 0.55s ease-out; z-index: 10; position: relative; }
+
+/* ── WIN BOX pop on appear ──────────────────────────────── */
+@keyframes winPop {
+  0%   { transform: scale(0.5) rotate(-8deg); opacity: 0; }
+  60%  { transform: scale(1.1) rotate(3deg);  opacity: 1; }
+  100% { transform: scale(1)   rotate(0);     opacity: 1; }
+}
+#win-box.pop { animation: winPop 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+/* ── DIE spin ─────────────────────────────────────────────── */
+@keyframes dieSpin {
+  0%,100% { transform: rotate(0)      scale(1); }
+  20%      { transform: rotate(-18deg) scale(1.15); }
+  40%      { transform: rotate(14deg)  scale(1.2); }
+  60%      { transform: rotate(-10deg) scale(1.15); }
+  80%      { transform: rotate(8deg)   scale(1.1); }
+}
+#die-face.shake { animation: dieSpin 0.42s ease-in-out; }
+
+/* ── CARD POPUP ───────────────────────────────────────────── */
+#card-popup {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.62);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+#card-popup.show { display: flex; }
+#card-inner {
+  background: #fffdf5;
+  border-radius: 28px;
+  padding: 20px 22px 22px;
+  text-align: center;
+  max-width: 620px;
+  width: 95%;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+  border: 5px solid #FF8C00;
+  animation: winPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+#card-who {
+  font-family: 'Bangers', cursive;
+  font-size: 19px;
+  letter-spacing: 2px;
+  color: #888;
+  margin-bottom: 2px;
+}
+#card-subtitle {
+  font-family: 'Bangers', cursive;
+  font-size: 30px;
+  letter-spacing: 3px;
+  color: #222;
+  margin-bottom: 14px;
+}
+#card-choices {
+  display: flex;
+  gap: 11px;
+  justify-content: center;
+}
+.choice-card {
+  flex: 1;
+  max-width: 172px;
+  background: white;
+  border: 4px solid #ccc;
+  border-radius: 18px;
+  padding: 14px 8px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.choice-card:hover  { transform: scale(1.08) translateY(-5px); box-shadow: 0 10px 28px rgba(0,0,0,0.22); }
+.choice-card:active { transform: scale(0.96); }
+.choice-card .cc-emoji { font-size: 42px; line-height: 1; }
+.choice-card .cc-name  {
+  font-family: 'Bangers', cursive;
+  font-size: 17px;
+  letter-spacing: 1px;
+  color: #222;
+  line-height: 1.1;
+}
+.choice-card .cc-desc  {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #555;
+  line-height: 1.35;
+  padding: 0 2px;
+}
+.choice-card.rr-card { border-color: #4A90D9; background: #EEF6FF; }
+.choice-card.cy-card { border-color: #FF8C00; background: #FFF6E8; }
+#card-timer-bar {
+  height: 7px;
+  background: #e8e8e8;
+  border-radius: 4px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+#card-timer-fill {
+  height: 100%;
+  border-radius: 4px;
+  width: 100%;
+}
+</style>
+</head>
+<body>
+
+<!-- Hidden SVG symbol library -->
+<div id="banner"></div>
+
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- ══ ROAD RUNNER ══ (dark royal blue, open beak, crest, orange legs) -->
+  <symbol id="char-rr" viewBox="0 0 90 110">
+    <!-- Tail feathers fan -->
+    <path d="M10,74 L0,60" stroke="#2255CC" stroke-width="5" stroke-linecap="round"/>
+    <path d="M10,74 L0,74" stroke="#1144BB" stroke-width="5" stroke-linecap="round"/>
+    <path d="M10,74 L0,86" stroke="#2255CC" stroke-width="4" stroke-linecap="round"/>
+    <path d="M10,74 L5,92" stroke="#3366DD" stroke-width="4" stroke-linecap="round"/>
+    <!-- Speed lines -->
+    <line x1="2" y1="56" x2="14" y2="56" stroke="#88AAFF" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
+    <line x1="4" y1="65" x2="13" y2="65" stroke="#88AAFF" stroke-width="2" opacity="0.4" stroke-linecap="round"/>
+    <!-- Body (dark blue) -->
+    <ellipse cx="40" cy="66" rx="26" ry="20" fill="#2255CC"/>
+    <!-- Belly (light sky blue) -->
+    <ellipse cx="44" cy="69" rx="16" ry="14" fill="#88CCEE"/>
+    <!-- Neck (light blue) -->
+    <path d="M52,53 Q60,43 56,33" stroke="#88CCEE" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <!-- Head (dark blue) -->
+    <ellipse cx="58" cy="29" rx="18" ry="16" fill="#2255CC"/>
+    <!-- Crest feathers (swept back) -->
+    <path d="M48,16 Q40,3 48,9" stroke="#1133AA" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    <path d="M52,13 Q46,-1 55,7" stroke="#2244BB" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    <path d="M57,11 Q53,-2 62,6" stroke="#1133AA" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M62,12 Q60,1 68,9" stroke="#2244BB" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <!-- Eye white -->
+    <circle cx="66" cy="25" r="8" fill="white"/>
+    <!-- Eye yellow sclera -->
+    <circle cx="66" cy="25" r="6" fill="#FFEE88"/>
+    <!-- Eye pupil -->
+    <circle cx="67" cy="25" r="3.5" fill="#111"/>
+    <!-- Eye shine -->
+    <circle cx="64" cy="22" r="1.2" fill="white"/>
+    <!-- Beak upper (orange, open wide) -->
+    <path d="M72,27 L90,19 L90,25 L72,31 Z" fill="#FFAA00"/>
+    <!-- Beak lower -->
+    <path d="M72,31 L90,25 L90,32 L74,35 Z" fill="#FF8800"/>
+    <!-- Tongue (pink) -->
+    <path d="M76,31 Q82,37 88,31" stroke="#FF6688" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <!-- Wing fold detail -->
+    <path d="M22,63 Q16,55 24,51" stroke="#1144BB" stroke-width="3" fill="none"/>
+    <!-- Legs (orange, long) -->
+    <line x1="36" y1="84" x2="24" y2="101" stroke="#FF9900" stroke-width="5" stroke-linecap="round"/>
+    <line x1="46" y1="84" x2="58" y2="101" stroke="#FF9900" stroke-width="5" stroke-linecap="round"/>
+    <!-- Feet (3-toed) -->
+    <line x1="20" y1="101" x2="30" y2="101" stroke="#FF9900" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="24" y1="97" x2="24" y2="107" stroke="#FF9900" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="54" y1="101" x2="64" y2="101" stroke="#FF9900" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="58" y1="97" x2="58" y2="107" stroke="#FF9900" stroke-width="3.5" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- ══ WILE E. COYOTE ══ (dark brown, huge nose, yellow eyes, red brows, tall ears) -->
+  <symbol id="char-cy" viewBox="0 0 90 110">
+    <!-- Bushy tail (dark brown) -->
+    <path d="M20,82 Q6,70 8,54 Q12,46 20,58" stroke="#6B4423" stroke-width="12" stroke-linecap="round" fill="none"/>
+    <path d="M20,82 Q4,67 7,52 Q11,45 18,56" stroke="#AA7733" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <!-- Body dark brown -->
+    <ellipse cx="50" cy="71" rx="24" ry="26" fill="#8B5E3C"/>
+    <!-- Belly cream -->
+    <ellipse cx="52" cy="75" rx="14" ry="18" fill="#D4AA70"/>
+    <!-- Neck -->
+    <path d="M52,48 Q56,39 58,31" stroke="#8B5E3C" stroke-width="15" stroke-linecap="round" fill="none"/>
+    <!-- Head (oval) -->
+    <ellipse cx="58" cy="27" rx="20" ry="18" fill="#8B5E3C"/>
+    <!-- Face/muzzle (cream) -->
+    <ellipse cx="66" cy="35" rx="14" ry="11" fill="#D4AA70"/>
+    <!-- Left ear (tall, pointed) -->
+    <path d="M44,13 Q38,-3 50,11" fill="#8B5E3C"/>
+    <path d="M45,12 Q40,1 49,11" fill="#CC8888"/>
+    <!-- Right ear -->
+    <path d="M68,11 Q70,-4 78,11" fill="#8B5E3C"/>
+    <path d="M69,11 Q71,2 76,11" fill="#CC8888"/>
+    <!-- Big black nose -->
+    <ellipse cx="77" cy="29" rx="7.5" ry="5.5" fill="#111111"/>
+    <!-- Nostrils -->
+    <ellipse cx="75" cy="30" rx="1.8" ry="1.2" fill="#333"/>
+    <ellipse cx="79" cy="29" rx="1.8" ry="1.2" fill="#333"/>
+    <!-- Eyes (yellow with black pupils) -->
+    <ellipse cx="56" cy="23" rx="7.5" ry="6.5" fill="#FFDD44"/>
+    <circle cx="57" cy="23" r="4" fill="#222"/>
+    <circle cx="55" cy="21" r="1.5" fill="white"/>
+    <ellipse cx="70" cy="21" rx="7" ry="6" fill="#FFDD44"/>
+    <circle cx="71" cy="21" r="3.5" fill="#222"/>
+    <circle cx="69" cy="19" r="1.2" fill="white"/>
+    <!-- Angry red eyebrow marks -->
+    <path d="M50,17 Q57,12 64,15" stroke="#CC3322" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    <path d="M64,14 Q69,11 77,14" stroke="#CC3322" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <!-- Scheming grin -->
+    <path d="M62,39 Q69,43 76,39" stroke="#6B3A1A" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <!-- Arm reaching forward -->
+    <path d="M30,63 Q18,59 12,67 Q8,73 14,75" stroke="#8B5E3C" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <ellipse cx="13" cy="76" rx="8" ry="5" fill="#6B4423"/>
+    <!-- Legs -->
+    <line x1="42" y1="95" x2="32" y2="108" stroke="#8B5E3C" stroke-width="9" stroke-linecap="round"/>
+    <line x1="58" y1="95" x2="66" y2="108" stroke="#8B5E3C" stroke-width="9" stroke-linecap="round"/>
+    <!-- Paws -->
+    <ellipse cx="30" cy="107" rx="10" ry="5" fill="#6B4423"/>
+    <ellipse cx="68" cy="107" rx="10" ry="5" fill="#6B4423"/>
+  </symbol>
+
+  <!-- ══ SPACE ICONS ══ -->
+
+  <!-- Cactus (saguaro) -->
+  <symbol id="icon-cactus" viewBox="0 0 40 50">
+    <rect x="17" y="10" width="6" height="35" rx="3" fill="#2E8B2E"/>
+    <rect x="6"  y="20" width="16" height="5" rx="2.5" fill="#2E8B2E"/>
+    <rect x="6"  y="15" width="5"  height="14" rx="2.5" fill="#2E8B2E"/>
+    <rect x="18" y="20" width="16" height="5" rx="2.5" fill="#2E8B2E"/>
+    <rect x="29" y="15" width="5"  height="14" rx="2.5" fill="#2E8B2E"/>
+    <circle cx="6"  cy="15" r="3" fill="#3EA83E"/>
+    <circle cx="34" cy="15" r="3" fill="#3EA83E"/>
+    <rect x="15" y="44" width="10" height="4" rx="2" fill="#C4A35A"/>
+    <line x1="20" y1="12" x2="18" y2="8"  stroke="#1A6B1A" stroke-width="1" stroke-linecap="round"/>
+    <line x1="20" y1="16" x2="22" y2="12" stroke="#1A6B1A" stroke-width="1" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- Canyon / cliff -->
+  <symbol id="icon-canyon" viewBox="0 0 44 44">
+    <rect x="0" y="28" width="44" height="16" fill="#AA3010"/>
+    <path d="M2,28 L2,16 L10,16 L10,24 L18,24 L18,12 L26,12 L26,24 L34,24 L34,16 L42,16 L42,28 Z" fill="#C84020"/>
+    <path d="M2,28 L2,18 L8,18 L8,26 L20,26 L20,14 L24,14 L24,26 L36,26 L36,18 L42,18 L42,28 Z" fill="#E05030" opacity="0.5"/>
+    <circle cx="22" cy="6" r="5" fill="#FFD700" opacity="0.7"/>
+  </symbol>
+
+  <!-- ACME Box -->
+  <symbol id="icon-acme" viewBox="0 0 44 44">
+    <rect x="4"  y="14" width="36" height="26" rx="4" fill="#D4A04A"/>
+    <rect x="4"  y="14" width="36" height="26" rx="4" fill="none" stroke="#AA7020" stroke-width="2"/>
+    <rect x="10" y="18" width="24" height="14" rx="2" fill="white" opacity="0.9"/>
+    <text x="22" y="29" font-family="Arial Black,sans-serif" font-size="9" font-weight="900" fill="#CC2200" text-anchor="middle">ACME</text>
+    <path d="M12,14 Q22,6 32,14" stroke="#AA7020" stroke-width="2" fill="none"/>
+    <line x1="22" y1="6" x2="22" y2="14" stroke="#888" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="22" cy="5" r="2" fill="#FFD700"/>
+  </symbol>
+
+  <!-- Lucky Star -->
+  <symbol id="icon-star" viewBox="0 0 44 44">
+    <polygon points="22,3 27,15 40,15 30,23 34,36 22,28 10,36 14,23 4,15 17,15" fill="#FFD700" stroke="#E0A000" stroke-width="1.5"/>
+    <polygon points="22,9 25,17 34,17 27,22 30,30 22,25 14,30 17,22 10,17 19,17" fill="#FFEE66" opacity="0.6"/>
+    <line x1="22" y1="0" x2="22" y2="3"  stroke="#FFE000" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="40" y1="22" x2="43" y2="22" stroke="#FFE000" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="4"  y1="22" x2="1"  y2="22" stroke="#FFE000" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- ZZZ sleep -->
+  <symbol id="icon-sleep" viewBox="0 0 44 44">
+    <ellipse cx="22" cy="32" rx="14" ry="9" fill="#9966CC" opacity="0.15"/>
+    <text x="10" y="24" font-family="Arial Black,sans-serif" font-size="14" font-weight="900" fill="#7744AA">Z</text>
+    <text x="20" y="17" font-family="Arial Black,sans-serif" font-size="11" font-weight="900" fill="#9955BB">Z</text>
+    <text x="28" y="11" font-family="Arial Black,sans-serif" font-size="8"  font-weight="900" fill="#AA66CC">Z</text>
+  </symbol>
+
+  <!-- Start checkerboard flag -->
+  <symbol id="icon-start" viewBox="0 0 44 44">
+    <line x1="8" y1="4" x2="8" y2="44" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+    <rect x="8"  y="4"  width="8" height="7" fill="#333"/>
+    <rect x="16" y="4"  width="8" height="7" fill="white"/>
+    <rect x="24" y="4"  width="8" height="7" fill="#333"/>
+    <rect x="32" y="4"  width="8" height="7" fill="white"/>
+    <rect x="8"  y="11" width="8" height="7" fill="white"/>
+    <rect x="16" y="11" width="8" height="7" fill="#333"/>
+    <rect x="24" y="11" width="8" height="7" fill="white"/>
+    <rect x="32" y="11" width="8" height="7" fill="#333"/>
+    <rect x="8"  y="18" width="8" height="7" fill="#333"/>
+    <rect x="16" y="18" width="8" height="7" fill="white"/>
+    <rect x="24" y="18" width="8" height="7" fill="#333"/>
+    <rect x="32" y="18" width="8" height="7" fill="white"/>
+  </symbol>
+
+  <!-- Trophy -->
+  <symbol id="icon-trophy" viewBox="0 0 44 44">
+    <rect x="16" y="34" width="12" height="6" rx="2" fill="#D4A030"/>
+    <rect x="12" y="40" width="20" height="4" rx="2" fill="#C49020"/>
+    <path d="M10,8 L10,26 Q10,34 22,34 Q34,34 34,26 L34,8 Z" fill="#FFD700"/>
+    <path d="M10,12 Q4,14 4,20 Q4,26 10,26"  stroke="#FFB700" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M34,12 Q40,14 40,20 Q40,26 34,26" stroke="#FFB700" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <text x="22" y="26" font-family="Arial Black,sans-serif" font-size="13" font-weight="900" fill="#AA7000" text-anchor="middle">1</text>
+  </symbol>
+
+  <!-- Open road (wind lines) -->
+  <symbol id="icon-road" viewBox="0 0 44 44">
+    <path d="M5,16 Q20,12 39,16" stroke="#AABBCC" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <path d="M3,25 Q22,21 41,25" stroke="#AABBCC" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="M7,33 Q22,30 37,33" stroke="#AABBCC" stroke-width="2"   fill="none" stroke-linecap="round" opacity="0.3"/>
+  </symbol>
+
+  <!-- Bonus Roll -->
+  <symbol id="icon-bonus" viewBox="0 0 44 44">
+    <rect x="2" y="14" width="17" height="17" rx="3.5" fill="#FF8C00"/>
+    <rect x="2" y="14" width="17" height="17" rx="3.5" fill="none" stroke="#CC5500" stroke-width="1.5"/>
+    <circle cx="7"  cy="19" r="2" fill="white"/>
+    <circle cx="13" cy="19" r="2" fill="white"/>
+    <circle cx="7"  cy="25" r="2" fill="white"/>
+    <circle cx="13" cy="25" r="2" fill="white"/>
+    <text x="22" y="27" font-family="Arial Black,sans-serif" font-size="14" font-weight="900" fill="#FF5500" text-anchor="middle">+</text>
+    <rect x="26" y="20" width="16" height="16" rx="3" fill="#FF6600"/>
+    <circle cx="34" cy="28" r="2.2" fill="white"/>
+    <circle cx="29" cy="23" r="1.8" fill="white"/>
+    <circle cx="39" cy="33" r="1.8" fill="white"/>
+  </symbol>
+
+  <!-- Gift Box -->
+  <symbol id="icon-gift" viewBox="0 0 44 44">
+    <rect x="5"  y="20" width="34" height="22" rx="3" fill="#FF69B4"/>
+    <rect x="5"  y="14" width="34" height="8"  rx="2" fill="#E8407A"/>
+    <rect x="19" y="14" width="6"  height="28" fill="#CC1060"/>
+    <path d="M22,14 Q15,6 12,9 Q9,12 16,14"  stroke="#CC1060" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M22,14 Q29,6 32,9 Q35,12 28,14" stroke="#CC1060" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="22" cy="28" r="3.5" fill="white" opacity="0.5"/>
+  </symbol>
+
+  <!-- Swap arrows -->
+  <symbol id="icon-swap" viewBox="0 0 44 44">
+    <path d="M6,15 L30,15 L24,9"  stroke="#009090" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M38,29 L14,29 L20,35" stroke="#007070" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle cx="22" cy="22" r="6" fill="#20C8C8" opacity="0.3"/>
+  </symbol>
+
+</svg>
+
+<div id="game-wrapper">
+<!-- Title -->
+<div id="title-bar">
+  <h1>BEEP BEEP! — Road Runner Chase</h1>
+  <p>Race to the FINISH — or catch Road Runner to WIN!</p>
+  <div id="title-btns">
+    <button id="restart-btn" onclick="if(confirm('Restart the game?')) { naturalGameW=0; initGame(); scaleGame(); computeSpacePositions(); renderTokens(); }">🔄 Restart</button>
+    <button id="fs-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+  </div>
+</div>
+
+<!-- Main -->
+<div id="main">
+
+  <!-- Board -->
+  <div id="board-section">
+    <div id="board-container">
+      <div id="board"></div>
+      <div id="token-rr" class="token">
+        <svg width="100%" height="100%" viewBox="0 0 90 110"><use href="#char-rr"/></svg>
+      </div>
+      <div id="token-coyote" class="token">
+        <svg width="100%" height="100%" viewBox="0 0 90 110"><use href="#char-cy"/></svg>
+      </div>
+    </div>
+    <div id="legend">
+      <div class="leg"><div class="leg-dot" style="background:#C8F5A0"><svg width="18" height="18"><use href="#icon-cactus"/></svg></div>+3 Shortcut</div>
+      <div class="leg"><div class="leg-dot" style="background:#FFB3A0"><svg width="18" height="18"><use href="#icon-canyon"/></svg></div>−3 Canyon</div>
+      <div class="leg"><div class="leg-dot" style="background:#B3DEFF"><svg width="18" height="18"><use href="#icon-acme"/></svg></div>ACME Card!</div>
+      <div class="leg"><div class="leg-dot" style="background:#FFF3A0"><svg width="18" height="18"><use href="#icon-star"/></svg></div>+5 Lucky Star</div>
+      <div class="leg"><div class="leg-dot" style="background:#E8D0FF"><svg width="18" height="18"><use href="#icon-sleep"/></svg></div>Miss a turn</div>
+      <div class="leg"><div class="leg-dot" style="background:#FFE0B0"><svg width="18" height="18"><use href="#icon-bonus"/></svg></div>Bonus Roll!</div>
+      <div class="leg"><div class="leg-dot" style="background:#FFD6EC"><svg width="18" height="18"><use href="#icon-gift"/></svg></div>Gift Box!</div>
+      <div class="leg"><div class="leg-dot" style="background:#B0F0F0"><svg width="18" height="18"><use href="#icon-swap"/></svg></div>Swap places!</div>
+    </div>
+  </div>
+
+  <!-- Panel -->
+  <div id="panel">
+
+    <!-- Whose Turn -->
+    <div id="turn-box" class="t-rr">
+      <div class="char-display">
+        <svg viewBox="0 0 90 110" width="72" height="88"><use href="#char-rr"/></svg>
+      </div>
+      <div class="pname">ROAD RUNNER</div>
+      <div class="pprompt">Roll the die!</div>
+    </div>
+
+    <!-- Die -->
+    <div class="pcard" id="die-area">
+      <span id="die-face">🎲</span>
+      <button id="roll-btn">🎲 ROLL THE DIE!</button>
+    </div>
+
+    <!-- Catches -->
+    <div class="pcard" id="catches-wrap">
+      <h3>🐾 Coyote Catches</h3>
+      <div id="catch-icons">○ ○</div>
+      <div id="catch-label">Catch Road Runner 2× to WIN!</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Card Popup — shown when landing on ACME space -->
+<div id="card-popup">
+  <div id="card-inner">
+    <div id="card-who"></div>
+    <div id="card-subtitle">🎁 PICK YOUR CARD!</div>
+    <div id="card-choices"></div>
+    <div id="card-timer-bar"><div id="card-timer-fill"></div></div>
+  </div>
+</div>
+
+</div><!-- end #game-wrapper -->
+
+<!-- Game Over -->
+<div id="overlay">
+  <div id="win-box">
+    <div class="win-char" id="we"></div>
+    <h2 id="wt">YOU WIN!</h2>
+    <p class="wsub" id="ws">Congratulations!</p>
+    <button id="pa-btn" onclick="naturalGameW=0; initGame(); scaleGame(); computeSpacePositions(); renderTokens();">🔄 PLAY AGAIN!</button>
+  </div>
+</div>
+
+<script>
+// ── PWA: SERVICE WORKER + ICON GENERATION ─────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () =>
+    navigator.serviceWorker.register('./sw.js').catch(() => {})
+  );
+}
+
+// Generate PNG icons via canvas and update manifest + apple-touch-icon
+function generateIcons() {
+  function makeIcon(size) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#FF6820';
+    const r = size * 0.15;
+    ctx.beginPath();
+    ctx.moveTo(r, 0); ctx.lineTo(size - r, 0);
+    ctx.arcTo(size, 0, size, r, r);
+    ctx.lineTo(size, size - r);
+    ctx.arcTo(size, size, size - r, size, r);
+    ctx.lineTo(r, size);
+    ctx.arcTo(0, size, 0, size - r, r);
+    ctx.lineTo(0, r);
+    ctx.arcTo(0, 0, r, 0, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = `${size * 0.55}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🐦', size / 2, size * 0.44);
+    ctx.fillStyle = 'white';
+    ctx.font = `900 ${size * 0.14}px Bangers,Impact,sans-serif`;
+    ctx.fillText('BEEP BEEP!', size / 2, size * 0.85);
+    return c.toDataURL('image/png');
+  }
+  try {
+    const url192 = makeIcon(192);
+    const url512 = makeIcon(512);
+    document.getElementById('apple-touch-icon').href = url192;
+    const manifest = {
+      name:'Beep Beep! Road Runner Game', short_name:'Beep Beep!',
+      description:'Road Runner vs Coyote kids board game',
+      start_url:'./game.html', scope:'./', display:'fullscreen',
+      orientation:'landscape', background_color:'#FF6820', theme_color:'#FF6820',
+      icons:[
+        {src:url192, sizes:'192x192', type:'image/png', purpose:'any'},
+        {src:url512, sizes:'512x512', type:'image/png', purpose:'any maskable'},
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+    document.getElementById('manifest-link').href = URL.createObjectURL(blob);
+  } catch(e) {}
+}
+generateIcons();
+
+// ── SOUND SYSTEM ──────────────────────────────────────────
+let audioCtx = null;
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, dur, type='sine', vol=0.3, delay=0) {
+  try {
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+    gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + dur);
+  } catch(e) {}
+}
+
+function playNoise(dur, vol=0.15, delay=0) {
+  try {
+    const ctx = getCtx();
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    src.buffer = buf; src.connect(gain); gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+    src.start(ctx.currentTime + delay);
+  } catch(e) {}
+}
+
+const SFX = {
+  beepbeep() {
+    playTone(880,  0.12, 'square', 0.25, 0);
+    playTone(1100, 0.14, 'square', 0.25, 0.18);
+  },
+  roll() {
+    playNoise(0.08, 0.12, 0);
+    playNoise(0.06, 0.10, 0.1);
+    playNoise(0.08, 0.12, 0.18);
+    playTone(300, 0.15, 'triangle', 0.2, 0.26);
+  },
+  move() {
+    playTone(400, 0.08, 'sine', 0.08);
+  },
+  shortcut() {
+    [523, 659, 784, 1047].forEach((f, i) => playTone(f, 0.12, 'triangle', 0.2, i * 0.08));
+  },
+  canyon() {
+    try {
+      const ctx = getCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(500, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.6);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.7);
+    } catch(e) {}
+  },
+  tnt() {
+    playNoise(0.35, 0.4);
+    playTone(80, 0.5, 'sine', 0.3, 0.05);
+    playTone(120, 0.3, 'sine', 0.2, 0.1);
+  },
+  catch() {
+    playTone(200, 0.08, 'square', 0.3);
+    playTone(150, 0.12, 'square', 0.3, 0.08);
+    playNoise(0.1, 0.2, 0.08);
+  },
+  star() {
+    [1047, 1319, 1568, 2093].forEach((f, i) => playTone(f, 0.1, 'sine', 0.15, i * 0.07));
+  },
+  sleep() {
+    [440, 392, 349, 330].forEach((f, i) => playTone(f, 0.2, 'sine', 0.15, i * 0.18));
+  },
+  card() {
+    playNoise(0.05, 0.1);
+    playTone(600, 0.1, 'sine', 0.1, 0.05);
+  },
+  swap() {
+    playTone(300, 0.1, 'sine', 0.2);
+    playTone(600, 0.1, 'sine', 0.2, 0.12);
+    playTone(300, 0.1, 'sine', 0.2, 0.24);
+  },
+  winRR() {
+    SFX.beepbeep();
+    [523, 659, 784, 1047, 784, 1047, 1319].forEach((f,i) => playTone(f, 0.15, 'triangle', 0.2, 0.4 + i*0.1));
+  },
+  winCoyote() {
+    [330, 392, 494, 659, 784].forEach((f,i) => playTone(f, 0.18, 'square', 0.18, i*0.12));
+  },
+  draw() {
+    playTone(660, 0.08, 'sine', 0.15);
+    playTone(880, 0.08, 'sine', 0.12, 0.1);
+  },
+};
+
+// ── CONFIG ────────────────────────────────────────────────
+const COLS=8, ROWS=6, TOTAL=48;
+
+const DIE=[,'⚀','⚁','⚂','⚃','⚄','⚅'];
+
+const ICON = {
+  open:   'icon-road',
+  green:  'icon-cactus',
+  red:    'icon-canyon',
+  blue:   'icon-acme',
+  gold:   'icon-star',
+  purple: 'icon-sleep',
+  orange: 'icon-bonus',
+  pink:   'icon-gift',
+  teal:   'icon-swap',
+  start:  'icon-start',
+  finish: 'icon-trophy',
+};
+
+function spType(i) {
+  if(i===0)  return 'start';
+  if(i===47) return 'finish';
+  if([5,21,37].includes(i))       return 'green';
+  if([8,24,40].includes(i))       return 'red';
+  if([3,16,30,43].includes(i))    return 'blue';
+  if([13,29].includes(i))         return 'gold';
+  if([10,26,42].includes(i))      return 'purple';
+  if([7,23,38].includes(i))       return 'orange';
+  if([18,34].includes(i))         return 'pink';
+  if([32,44].includes(i))         return 'teal';
+  return 'open';
+}
+
+const SP = {
+  open:   {cls:'sp-open'},
+  green:  {cls:'sp-green'},
+  red:    {cls:'sp-red'},
+  blue:   {cls:'sp-blue'},
+  gold:   {cls:'sp-gold'},
+  purple: {cls:'sp-purple'},
+  orange: {cls:'sp-orange'},
+  pink:   {cls:'sp-pink'},
+  teal:   {cls:'sp-teal'},
+  start:  {cls:'sp-start'},
+  finish: {cls:'sp-finish'},
+};
+
+const PATH = Array.from({length:TOTAL},(_,i)=>{
+  const bRow = Math.floor(i/COLS);
+  const posInRow = i%COLS;
+  const gc = (bRow%2===0) ? posInRow : (COLS-1-posInRow);
+  return { gr: ROWS-1-bRow, gc };
+});
+
+let SPACE_POS = [];
+let currentScale = 1;
+
+function computeSpacePositions() {
+  const container = document.getElementById('board-container');
+  if (!container) return;
+  const cr = container.getBoundingClientRect();
+  SPACE_POS = [];
+  for (let i = 0; i < TOTAL; i++) {
+    const el = document.getElementById(`s${i}`);
+    if (el) {
+      const r = el.getBoundingClientRect();
+      SPACE_POS.push({
+        x: (r.left - cr.left + r.width  / 2) / currentScale,
+        y: (r.top  - cr.top  + r.height / 2) / currentScale,
+      });
+    } else {
+      SPACE_POS.push({ x: 0, y: 0 });
+    }
+  }
+}
+
+function spXY(i) { return SPACE_POS[i] || { x: 0, y: 0 }; }
+
+// Card definitions
+const RR_DEF = [
+  {id:'beepbeep',   emoji:'💨', name:'BEEP BEEP!',     desc:'Move forward 4 spaces!'},
+  {id:'dustdevil',  emoji:'🌪️', name:'Dust Devil',      desc:'Coyote misses next turn!'},
+  {id:'shortcut',   emoji:'🗺️', name:'Shortcut!',       desc:'Zoom ahead 5 spaces!'},
+  {id:'turbolegs',  emoji:'🦵', name:'Turbo Legs',      desc:'Move forward 6 spaces!'},
+  {id:'decoyseed',  emoji:'🌱', name:'Decoy Seed',      desc:'Coyote goes back 3 spaces!'},
+  {id:'speedburst', emoji:'⚡', name:'Speed Burst',     desc:'Move +5, Coyote back 2!'},
+  {id:'desertpath', emoji:'🏜️', name:'Desert Path',     desc:'Jump forward 8 spaces!'},
+  {id:'superboost', emoji:'🚀', name:'Mega Boost!',     desc:'ZOOM ahead 10 spaces!'},
+  {id:'freeze',     emoji:'🥶', name:'Deep Freeze',     desc:'Coyote misses 2 turns! Brrr!'},
+  {id:'warpzone',   emoji:'🌀', name:'Warp Zone',       desc:'Jump to 5 ahead of Coyote!'},
+];
+const CY_DEF = [
+  {id:'skates',     emoji:'🛼', name:'Rocket Skates',   desc:'Move forward 4 spaces!'},
+  {id:'magnet',     emoji:'🧲', name:'Giant Magnet',    desc:'Pull Road Runner back 3!'},
+  {id:'birdseed',   emoji:'🌾', name:'Bird Seed',       desc:'Road Runner misses a turn!'},
+  {id:'tnt',        emoji:'💥', name:'TNT Blast',       desc:'Move +5, RR also moves back 2!'},
+  {id:'disguise',   emoji:'🎭', name:'Disguise Kit',    desc:'Swap positions with Road Runner!'},
+  {id:'boomerang',  emoji:'🪃', name:'Boomerang',       desc:'Road Runner goes back 4 spaces!'},
+  {id:'rocket',     emoji:'🚀', name:'ACME Rocket',     desc:'Move forward 7 spaces!'},
+  {id:'speedsteal', emoji:'🌀', name:'Speed Steal',     desc:'Coyote +3 spaces, RR -3 spaces!'},
+  {id:'jetpak',     emoji:'🚁', name:'ACME Jetpack',    desc:'Fly forward 6 spaces!'},
+  {id:'anvil',      emoji:'⚒️', name:'Falling Anvil',   desc:'Road Runner back 5 spaces!'},
+  {id:'grabber',    emoji:'🦾', name:'ACME Grabber',    desc:'Lunge at Road Runner if close!'},
+];
+
+// ── STATE ─────────────────────────────────────────────────
+let state={};
+
+// ── HELPERS ───────────────────────────────────────────────
+function showBanner(msg, color='#FF8C00') {
+  const b=document.getElementById('banner');
+  b.textContent=msg;
+  b.style.background=color;
+  b.classList.add('show');
+  setTimeout(()=>b.classList.remove('show'), 1700);
+}
+
+function launchConfetti() {
+  const colors=['#FF5722','#FFD700','#4A90D9','#5cb85c','#E91E63','#FF8C00','#9C27B0'];
+  for(let i=0;i<55;i++){
+    const c=document.createElement('div');
+    c.className='confetti-piece';
+    const drift=(Math.random()*200-100)+'px';
+    const dur=(1.5+Math.random()*2)+'s';
+    const delay=(Math.random()*0.7)+'s';
+    const size=(8+Math.random()*10)+'px';
+    c.style.cssText=`left:${Math.random()*100}vw;top:-14px;width:${size};height:${size};`+
+      `background:${colors[Math.floor(Math.random()*colors.length)]};`+
+      `border-radius:${Math.random()>0.45?'50%':'3px'};`+
+      `--drift:${drift};--dur:${dur};--delay:${delay};`;
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(), 3600);
+  }
+}
+
+function highlightSpace(idx) {
+  const el=document.getElementById(`s${idx}`);
+  if(!el) return;
+  el.classList.remove('landed');
+  void el.offsetWidth;
+  el.classList.add('landed');
+  setTimeout(()=>el.classList.remove('landed'), 600);
+}
+
+// ── CARD POPUP FUNCTIONS ──────────────────────────────────
+function pickAcmeCards(who, n) {
+  const pool = (who === 'rr' ? RR_DEF : CY_DEF).slice();
+  for(let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, Math.min(n, pool.length));
+}
+
+function showCardPopup(cards, who) {
+  return new Promise(resolve => {
+    const isRR = who === 'rr';
+    const popup = document.getElementById('card-popup');
+    const inner = document.getElementById('card-inner');
+    document.getElementById('card-who').textContent = isRR
+      ? '🐦 Road Runner — pick your move!'
+      : '🐺 Coyote — pick your weapon!';
+    inner.style.borderColor = isRR ? '#4A90D9' : '#FF8C00';
+
+    const choices = document.getElementById('card-choices');
+    choices.innerHTML = '';
+    let resolved = false;
+
+    function pick(c) {
+      if(resolved) return;
+      resolved = true;
+      clearTimeout(timer);
+      SFX.card();
+      popup.classList.remove('show');
+      resolve(c);
+    }
+
+    cards.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = `choice-card ${isRR ? 'rr-card' : 'cy-card'}`;
+      btn.innerHTML =
+        `<span class="cc-emoji">${c.emoji}</span>` +
+        `<span class="cc-name">${c.name}</span>` +
+        `<span class="cc-desc">${c.desc}</span>`;
+      btn.addEventListener('click', () => pick(c));
+      choices.appendChild(btn);
+    });
+
+    // Countdown bar
+    const fill = document.getElementById('card-timer-fill');
+    fill.style.background = isRR ? '#4A90D9' : '#FF8C00';
+    fill.style.transition = 'none';
+    fill.style.width = '100%';
+    void fill.offsetWidth;
+    fill.style.transition = 'width 10s linear';
+    fill.style.width = '0%';
+
+    // Auto-pick first card after 10 s
+    const timer = setTimeout(() => { if(!resolved){ resolved=true; popup.classList.remove('show'); resolve(cards[0]); } }, 10000);
+
+    popup.classList.add('show');
+  });
+}
+
+async function applyCardEffect(c, who) {
+  const {id} = c;
+  if(id==='beepbeep'){
+    SFX.beepbeep(); showBanner('💨 BEEP BEEP! +4 spaces!','#2255CC');
+    const f=state.pos.rr; await moveToken('rr',f,Math.min(47,f+4));
+  } else if(id==='shortcut'){
+    SFX.shortcut(); showBanner('🗺️ SHORTCUT! RR +5!','#2255CC');
+    const f=state.pos.rr; await moveToken('rr',f,Math.min(47,f+5));
+  } else if(id==='dustdevil'){
+    SFX.sleep(); showBanner('🌪️ DUST DEVIL! Coyote misses a turn!','#7744AA');
+    state.skip.coyote=1;
+  } else if(id==='skates'){
+    SFX.shortcut(); showBanner('🛼 ROCKET SKATES! Coyote +4!','#FF8C00');
+    const f=state.pos.coyote; await moveToken('coyote',f,Math.min(47,f+4));
+  } else if(id==='magnet'){
+    SFX.canyon(); showBanner('🧲 GIANT MAGNET! RR pulled back 3!','#884400');
+    const f=state.pos.rr; await moveToken('rr',f,Math.max(0,f-3));
+  } else if(id==='birdseed'){
+    SFX.sleep(); showBanner('🌾 BIRD SEED! Road Runner misses a turn!','#7744AA');
+    state.skip.rr=1;
+  } else if(id==='turbolegs'){
+    SFX.beepbeep(); showBanner('🦵 TURBO LEGS! RR +6!','#2255CC');
+    const f=state.pos.rr; await moveToken('rr',f,Math.min(47,f+6));
+  } else if(id==='decoyseed'){
+    SFX.canyon(); showBanner('🌱 DECOY SEED! Coyote back 3!','#884400');
+    const f=state.pos.coyote; await moveToken('coyote',f,Math.max(0,f-3));
+  } else if(id==='speedburst'){
+    SFX.shortcut(); showBanner('⚡ SPEED BURST! RR +5, Coyote -2!','#2255CC');
+    const f=state.pos.rr; await moveToken('rr',f,Math.min(47,f+5));
+    const cf=state.pos.coyote; await moveToken('coyote',cf,Math.max(0,cf-2));
+  } else if(id==='desertpath'){
+    SFX.beepbeep(); showBanner('🏜️ DESERT PATH! RR +8!','#2255CC');
+    const f=state.pos.rr; await moveToken('rr',f,Math.min(47,f+8));
+  } else if(id==='tnt'){
+    SFX.tnt(); showBanner('💥 TNT BLAST! Coyote +5, RR -2!','#CC4400');
+    const cf=state.pos.coyote; await moveToken('coyote',cf,Math.min(47,cf+5));
+    const rf=state.pos.rr; await moveToken('rr',rf,Math.max(0,rf-2));
+  } else if(id==='disguise'){
+    SFX.swap(); showBanner('🎭 DISGUISE! Positions SWAPPED!','#007070');
+    const rrP=state.pos.rr,cyP=state.pos.coyote;
+    state.pos.rr=cyP; state.pos.coyote=rrP; renderTokens(); await sleep(400);
+  } else if(id==='boomerang'){
+    SFX.canyon(); showBanner('🪃 BOOMERANG! RR back 4!','#884400');
+    const rf=state.pos.rr; await moveToken('rr',rf,Math.max(0,rf-4));
+  } else if(id==='rocket'){
+    SFX.beepbeep(); showBanner('🚀 ACME ROCKET! Coyote +7!','#FF8C00');
+    const cf=state.pos.coyote; await moveToken('coyote',cf,Math.min(47,cf+7));
+  } else if(id==='speedsteal'){
+    SFX.swap(); showBanner('🌀 SPEED STEAL! Coyote +3, RR -3!','#CC6600');
+    const cf=state.pos.coyote,rf=state.pos.rr;
+    await moveToken('coyote',cf,Math.min(47,cf+3)); await moveToken('rr',rf,Math.max(0,rf-3));
+  } else if(id==='superboost'){
+    SFX.beepbeep(); showBanner('🚀 MEGA BOOST! RR +10!','#2255CC');
+    const f=state.pos.rr; await moveToken('rr',f,Math.min(47,f+10));
+  } else if(id==='freeze'){
+    SFX.sleep(); showBanner('🥶 DEEP FREEZE! Coyote misses 2 turns!','#5599CC');
+    state.skip.coyote=2;
+  } else if(id==='warpzone'){
+    SFX.swap(); showBanner('🌀 WARP ZONE! RR teleports ahead!','#2255CC');
+    const target=Math.min(47,state.pos.coyote+5);
+    await moveToken('rr',state.pos.rr,target);
+  } else if(id==='jetpak'){
+    SFX.shortcut(); showBanner('🚁 JETPACK! Coyote +6!','#FF8C00');
+    const f=state.pos.coyote; await moveToken('coyote',f,Math.min(47,f+6));
+  } else if(id==='anvil'){
+    SFX.canyon(); showBanner('⚒️ FALLING ANVIL! RR back 5!','#884400');
+    const f=state.pos.rr; await moveToken('rr',f,Math.max(0,f-5));
+  } else if(id==='grabber'){
+    const dist=Math.abs(state.pos.coyote-state.pos.rr);
+    if(dist<=7){
+      SFX.catch(); showBanner('🦾 GRABBER ACTIVATED! Coyote lunges!','#FF8C00');
+      state.pos.coyote=state.pos.rr; renderTokens(); await sleep(400);
+    } else {
+      SFX.shortcut(); showBanner('🦾 GRABBER! Coyote +3 (too far to grab)','#FF8C00');
+      const f=state.pos.coyote; await moveToken('coyote',f,Math.min(47,f+3));
+    }
+  } else if(id==='smuglook'){
+    SFX.beepbeep(); showBanner('😏 SMUG LOOK! RR +3 bonus!','#2255CC');
+    const f=state.pos.rr; await moveToken('rr',f,Math.min(47,f+3));
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────
+function initGame() {
+  state={
+    pos:    {rr:0, coyote:0},
+    catches: 0,
+    skip:   {rr:0, coyote:0},
+    phase:  'roll',
+    cp:     'rr',
+    busy:   false,
+    log:    [],
+  };
+  document.getElementById('overlay').classList.remove('show');
+  buildBoard();
+  computeSpacePositions();
+  renderAll();
+  log('🏁 Game started! Road Runner goes first!');
+}
+
+// ── BUILD BOARD ────────────────────────────────────────────
+function buildBoard() {
+  const el=document.getElementById('board');
+  el.innerHTML='';
+  for(let i=0;i<TOTAL;i++){
+    const t=spType(i), cfg=SP[t], {gr,gc}=PATH[i];
+    const d=document.createElement('div');
+    d.className=`space ${cfg.cls}`;
+    d.id=`s${i}`;
+    d.style.gridRow=gr+1;
+    d.style.gridColumn=gc+1;
+    if(t==='start'){
+      d.innerHTML=`<svg width="46" height="46" style="display:block;margin:0 auto"><use href="#icon-start"/></svg><span class="slabel" style="color:#2d6e00">GO!</span>`;
+    } else if(t==='finish'){
+      d.innerHTML=`<svg width="46" height="46" style="display:block;margin:0 auto"><use href="#icon-trophy"/></svg><span class="slabel" style="color:#7a5000">FINISH!</span>`;
+    } else {
+      d.innerHTML=`<span class="num">${i+1}</span><svg width="44" height="44" style="display:block;margin:0 auto"><use href="#${ICON[t]}"/></svg>`;
+    }
+    el.appendChild(d);
+  }
+}
+
+// ── RENDER ─────────────────────────────────────────────────
+function renderAll() { renderTokens(); renderTurn(); renderDieBtn(); renderCatches(); }
+
+function renderTokens() {
+  const TK=30;
+  const rp=spXY(state.pos.rr), cp2=spXY(state.pos.coyote);
+  const same=state.pos.rr===state.pos.coyote;
+  document.getElementById('token-rr').style.cssText=
+    `left:${(same?rp.x-14:rp.x)-TK}px;top:${(same?rp.y-13:rp.y)-TK}px`;
+  document.getElementById('token-coyote').style.cssText=
+    `left:${(same?cp2.x+14:cp2.x)-TK}px;top:${(same?cp2.y+13:cp2.y)-TK}px`;
+}
+
+function renderTurn() {
+  const isRR = state.cp === 'rr';
+  const tb = document.getElementById('turn-box');
+  tb.className = isRR ? 't-rr' : 't-coyote';
+  const charId = isRR ? 'char-rr' : 'char-cy';
+  const prompt = state.phase === 'roll' ? 'Roll the die!' : '';
+  tb.innerHTML = `
+    <div class="char-display">
+      <svg viewBox="0 0 90 110" width="72" height="88"><use href="#${charId}"/></svg>
+    </div>
+    <div class="pname">${isRR ? 'ROAD RUNNER' : 'COYOTE'}</div>
+    <div class="pprompt">${state.phase==='gameover' ? '' : prompt}</div>`;
+}
+
+function renderDieBtn(val) {
+  if(val!==undefined) document.getElementById('die-face').textContent=DIE[val]||'🎲';
+  document.getElementById('roll-btn').disabled = state.phase!=='roll'||state.busy;
+}
+
+function renderCatches() {
+  document.getElementById('catch-icons').textContent=
+    (state.catches>=1?'🐾':'○')+' '+(state.catches>=2?'🐾':'○');
+}
+
+function log(msg) {
+  state.log.unshift(msg);
+  if(state.log.length>8) state.log.pop();
+}
+
+// ── ANIMATION HELPERS ──────────────────────────────────────
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+async function moveToken(who, from, to) {
+  const dir = to>from?1:-1;
+  let cur=from;
+  while(cur!==to){
+    cur=Math.max(0,Math.min(47,cur+dir));
+    state.pos[who]=cur;
+    renderTokens();
+    SFX.move();
+    await sleep(290);
+    if(cur<=0||cur>=47) break;
+  }
+}
+
+async function applySpace(who) {
+  const t=spType(state.pos[who]);
+  if(t==='green'){
+    SFX.shortcut();
+    showBanner('🌵 SHORTCUT! +3 spaces!', '#4A9E18');
+    const f=state.pos[who];
+    await moveToken(who,f,Math.min(47,f+3));
+  } else if(t==='red'){
+    SFX.canyon();
+    showBanner('🏜️ CANYON! Back 3 spaces!', '#CC3300');
+    const f=state.pos[who];
+    await moveToken(who,f,Math.max(0,f-3));
+  } else if(t==='blue'){
+    const cards = pickAcmeCards(who, 3);
+    const chosen = await showCardPopup(cards, who);
+    if(chosen) {
+      showBanner(`${chosen.emoji} ${chosen.name}!`, who==='rr'?'#2255CC':'#CC5500');
+      await applyCardEffect(chosen, who);
+    }
+  } else if(t==='gold'){
+    SFX.star();
+    showBanner('⭐ LUCKY STAR! +5 spaces!', '#CC8800');
+    const f=state.pos[who];
+    await moveToken(who,f,Math.min(47,f+5));
+  } else if(t==='purple'){
+    SFX.sleep();
+    showBanner(`💤 ${who==='rr'?'Road Runner':'Coyote'} SLEEPING! Turn skipped!`, '#7744AA');
+    state.skip[who]=1;
+  } else if(t==='orange'){
+    SFX.roll();
+    const bonus=Math.ceil(Math.random()*6);
+    showBanner(`🎲 BONUS ROLL! +${bonus} extra spaces!`, '#CC6600');
+    const bf=state.pos[who];
+    await moveToken(who,bf,Math.min(47,bf+bonus));
+  } else if(t==='pink'){
+    SFX.draw();
+    showBanner('🎁 GIFT BOX! +3 spaces for both players!', '#CC2070');
+    const rrF=state.pos.rr; const cyF=state.pos.coyote;
+    state.pos.rr=Math.min(47,rrF+3); state.pos.coyote=Math.min(47,cyF+3);
+    renderTokens();
+    await sleep(500);
+  } else if(t==='teal'){
+    SFX.swap();
+    showBanner('🔄 SWAP SPACE! Positions exchanged!', '#007070');
+    const rrP=state.pos.rr, cyP=state.pos.coyote;
+    state.pos.rr=cyP; state.pos.coyote=rrP;
+    renderTokens();
+    await sleep(500);
+  }
+}
+
+async function checkCatch() {
+  if(state.pos.rr!==state.pos.coyote || state.pos.rr===0) return false;
+  SFX.catch();
+  const bd=document.getElementById('board');
+  bd.classList.add('cflash');
+  setTimeout(()=>bd.classList.remove('cflash'),600);
+  state.catches++;
+  log(`🐺💥 CAUGHT! Coyote grabbed Road Runner! (${state.catches}/2)`);
+  renderCatches();
+  await sleep(600);
+  if(state.catches>=2){ launchConfetti(); await sleep(300); win('coyote'); return true; }
+  log('😱 Road Runner scrambles away!');
+  showBanner('😱 CAUGHT! Road Runner scrambles back!', '#CC4400');
+  await moveToken('rr',state.pos.rr,Math.max(0,state.pos.rr-3));
+  return false;
+}
+
+function win(who) {
+  state.phase='gameover'; state.busy=false;
+  const ov=document.getElementById('overlay');
+  const [we,wt,ws]=['we','wt','ws'].map(id=>document.getElementById(id));
+  if(who==='rr'){
+    SFX.winRR();
+    we.innerHTML=`<svg viewBox="0 0 90 110" width="110" height="130"><use href="#char-rr"/></svg>`;
+    wt.textContent='ROAD RUNNER WINS!'; wt.style.color='#4A90D9';
+    ws.textContent='BEEP BEEP! Too fast for Coyote! 💨';
+  } else {
+    SFX.winCoyote();
+    we.innerHTML=`<svg viewBox="0 0 90 110" width="110" height="130"><use href="#char-cy"/></svg>`;
+    wt.textContent='COYOTE WINS!'; wt.style.color='#FF8C00';
+    ws.textContent='Wile E. finally catches the bird! 🎉';
+  }
+  ov.classList.add('show');
+  setTimeout(()=>{ const wb=document.getElementById('win-box'); wb.classList.remove('pop'); void wb.offsetWidth; wb.classList.add('pop'); }, 50);
+}
+
+// ── TURN FLOW ──────────────────────────────────────────────
+document.getElementById('roll-btn').addEventListener('click', async function() {
+  if(state.phase!=='roll'||state.busy) return;
+
+  if(state.skip[state.cp] > 0){
+    state.skip[state.cp] = Math.max(0, state.skip[state.cp]-1);
+    state.busy = true;
+    renderDieBtn();
+    const nm=state.cp==='rr'?'🐦 Road Runner':'🐺 Coyote';
+    SFX.sleep();
+    showBanner(`💤 ${nm} is SLEEPING! Turn skipped!`, '#7744AA');
+    await sleep(1800);
+    state.cp=state.cp==='rr'?'coyote':'rr';
+    state.busy = false;
+    renderAll();
+    return;
+  }
+
+  state.busy=true;
+  renderDieBtn();
+
+  SFX.roll();
+  const roll=Math.ceil(Math.random()*6);
+  const face=document.getElementById('die-face');
+  face.classList.add('shake');
+  const cycleInterval = setInterval(()=>{ face.textContent = DIE[Math.ceil(Math.random()*6)]||'🎲'; }, 55);
+  await sleep(440);
+  clearInterval(cycleInterval);
+  face.classList.remove('shake');
+  renderDieBtn(roll);
+
+  const nm=state.cp==='rr'?'🐦 Road Runner':'🐺 Coyote';
+  log(`${nm} rolled a ${roll}!`);
+  await sleep(280);
+
+  const from=state.pos[state.cp];
+  await moveToken(state.cp, from, Math.min(47,Math.max(0,from+roll)));
+  highlightSpace(state.pos[state.cp]);
+
+  await sleep(120);
+  try {
+    await applySpace(state.cp);
+  } catch(err) {
+    console.error('applySpace error:', err);
+  }
+
+  if(state.pos[state.cp]>=47){
+    state.pos[state.cp]=47; renderTokens();
+    if(state.cp==='rr'){
+      launchConfetti();
+      showBanner('🏆 ROAD RUNNER WINS! BEEP BEEP! 💨', '#4A90D9');
+      await sleep(600); win('rr'); return;
+    } else {
+      launchConfetti();
+      showBanner('🏆 COYOTE WINS! Got to the finish! 🐺', '#FF8C00');
+      await sleep(600); win('coyote'); return;
+    }
+  }
+
+  const caught=await checkCatch();
+  if(state.phase==='gameover') return;
+
+  state.busy=false;
+  endTurn();
+});
+
+function endTurn() {
+  if(state.phase==='gameover') return;
+  SFX.draw();
+  state.cp=state.cp==='rr'?'coyote':'rr';
+  state.phase='roll';
+  if(state.cp==='rr') setTimeout(()=>SFX.beepbeep(), 200);
+  renderAll();
+}
+
+// ── SCALE TO FIT VIEWPORT ─────────────────────────────────
+let naturalGameW = 0, naturalGameH = 0;
+function scaleGame() {
+  const w = document.getElementById('game-wrapper');
+  if (!naturalGameW) {
+    w.style.transform = 'none';
+    w.style.width = '';
+    w.style.height = '';
+    w.style.left = '0';
+    w.style.top = '0';
+    void w.offsetWidth;
+    naturalGameW = w.offsetWidth;
+    naturalGameH = w.offsetHeight;
+  }
+  if (!naturalGameW) return;
+  const s = Math.min(window.innerWidth / naturalGameW, window.innerHeight / naturalGameH);
+  currentScale = s;
+  w.style.width  = naturalGameW + 'px';
+  w.style.height = naturalGameH + 'px';
+  w.style.transformOrigin = 'top left';
+  w.style.transform = 'scale(' + s + ')';
+  w.style.left = Math.max(0, (window.innerWidth  - naturalGameW * s) / 2) + 'px';
+  w.style.top  = Math.max(0, (window.innerHeight - naturalGameH * s) / 2) + 'px';
+}
+
+window.addEventListener('resize', () => { naturalGameW=0; scaleGame(); computeSpacePositions(); renderTokens(); });
+
+// ── FULLSCREEN ────────────────────────────────────────────
+function toggleFullscreen() {
+  const btn = document.getElementById('fs-btn');
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+    btn.textContent = '✕ Exit Fullscreen';
+  } else {
+    document.exitFullscreen().catch(() => {});
+    btn.textContent = '⛶ Fullscreen';
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fs-btn');
+  if (btn) btn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+  naturalGameW = 0;
+  setTimeout(() => { scaleGame(); computeSpacePositions(); renderTokens(); }, 120);
+});
+
+initGame();
+scaleGame();
+computeSpacePositions(); renderTokens();
+</script>
+</body>
+</html>

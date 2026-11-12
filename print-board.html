@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BEEP BEEP! — Print & Play Board</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #f0e8d8;
+  font-family: 'Nunito', sans-serif;
+}
+
+/* PRINT */
+@page { size: A4 landscape; margin: 6mm; }
+@media print {
+  .no-print { display: none !important; }
+  .sheet { page-break-after: always; }
+  .sheet:last-child { page-break-after: avoid; }
+  body { background: white; }
+}
+
+/* SCREEN BUTTON */
+.no-print {
+  position: fixed; top: 12px; right: 12px; z-index: 999;
+}
+.no-print button {
+  font-family: 'Bangers', cursive;
+  font-size: 20px; letter-spacing: 1px;
+  background: #e05000; color: white;
+  border: 3px solid #9a3000;
+  border-radius: 10px; padding: 10px 22px;
+  cursor: pointer; box-shadow: 0 4px 0 #9a3000;
+}
+.no-print button:hover { background: #ff6820; transform: translateY(-1px); }
+.no-print button:active { transform: translateY(2px); box-shadow: 0 2px 0 #9a3000; }
+
+/* SHEET = one A4 landscape page */
+.sheet {
+  width: 285mm;
+  min-height: 197mm;
+  background: white;
+  margin: 0 auto 20px auto;
+  border: 2px solid #ccc;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   SHEET 1: THE BOARD
+───────────────────────────────────────────── */
+#board-sheet {
+  display: flex;
+  align-items: stretch;
+}
+
+/* Desert gradient background */
+#board-sheet::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(150deg, #fffbf0 0%, #fff3d0 60%, #ffe8b0 100%);
+  z-index: 0;
+}
+
+/* Title column on left */
+.title-col {
+  width: 22mm;
+  background: #e05000;
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  padding: 5mm 2mm;
+  flex-shrink: 0;
+}
+
+.title-vert {
+  font-family: 'Bangers', cursive;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  color: white;
+  font-size: 28pt;
+  letter-spacing: 3px;
+  text-shadow: 2px 2px 0 #9a3000;
+  line-height: 1;
+}
+
+.title-chars { font-size: 26pt; line-height: 1.3; text-align: center; }
+
+/* Board grid area */
+.board-col {
+  flex: 1;
+  position: relative; z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4mm 3mm;
+  gap: 0;
+}
+
+.board-row {
+  display: flex;
+  align-items: center;
+}
+
+/* Each space */
+.sp {
+  width: 30mm;
+  height: 28mm;
+  border-radius: 8px;
+  border: 2px solid rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 1.2mm;
+  flex-shrink: 0;
+}
+
+.sp-num {
+  position: absolute;
+  top: 2px; left: 5px;
+  font-family: 'Bangers', cursive;
+  font-size: 9pt;
+  opacity: 0.65;
+  line-height: 1;
+}
+
+.sp-emoji {
+  font-size: 22pt;
+  line-height: 1;
+}
+
+/* Space colors — only 4 types */
+.sp-open   { background: #FFF8E8; }
+.sp-green  { background: #D0F5B0; border-color: #5cb85c; }
+.sp-red    { background: #FFD5C8; border-color: #e05000; }
+.sp-blue   { background: #C8E8FF; border-color: #4a90d9; }
+.sp-start  { background: #5cb85c; border-color: #3a8a3a; }
+.sp-finish { background: #FFD700; border-color: #c8a000; }
+
+/* Arrow connector between rows */
+.row-arrow {
+  width: 100%;
+  display: flex;
+  padding: 0 2mm;
+  height: 6mm;
+  align-items: center;
+}
+.arrow-right { justify-content: flex-end; }
+.arrow-left  { justify-content: flex-start; }
+.arrow-right span,
+.arrow-left  span {
+  font-size: 18pt;
+  color: #c87830;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* Legend + info column */
+.info-col {
+  width: 44mm;
+  position: relative; z-index: 1;
+  padding: 4mm 3mm;
+  display: flex; flex-direction: column;
+  gap: 2.5mm;
+  border-left: 2.5px solid #e8d090;
+  background: rgba(255,255,255,0.6);
+  flex-shrink: 0;
+}
+
+.info-box {
+  background: white;
+  border: 2px solid #e8d090;
+  border-radius: 8px;
+  padding: 2.5mm 2.5mm;
+}
+
+.info-title {
+  font-family: 'Bangers', cursive;
+  font-size: 10pt; letter-spacing: 1px;
+  color: #e05000;
+  margin-bottom: 2mm;
+  padding-bottom: 1.5mm;
+  border-bottom: 1.5px solid #f0dda0;
+}
+
+.leg-row {
+  display: flex; align-items: center; gap: 2mm;
+  margin-bottom: 2mm; font-size: 7pt; font-weight: 700;
+  line-height: 1.3; color: #333;
+}
+
+.leg-swatch {
+  width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0;
+  border: 1.5px solid rgba(0,0,0,0.2);
+}
+
+.rules-text {
+  font-size: 7pt; font-weight: 700; line-height: 1.7; color: #333;
+}
+
+.score-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2mm;
+}
+
+.score-card {
+  background: #f8f5ee; border: 1.5px solid #ddd;
+  border-radius: 6px; padding: 2mm;
+  text-align: center;
+}
+.score-icon { font-size: 18pt; line-height: 1; }
+.score-name { font-family: 'Bangers', cursive; font-size: 7.5pt; letter-spacing: 1px; color: #555; }
+.score-space { font-size: 6pt; color: #888; margin-top: 1mm; }
+.score-catches { font-size: 9pt; margin-top: 1mm; }
+
+
+/* ─────────────────────────────────────────────
+   SHEET 2: CARDS + RULES
+───────────────────────────────────────────── */
+#cards-sheet {
+  display: flex;
+  gap: 0;
+}
+
+#cards-sheet::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(150deg, #fffbf0 0%, #fff3d0 100%);
+}
+
+.cards-col {
+  flex: 1;
+  position: relative; z-index: 1;
+  padding: 5mm;
+}
+
+.cards-col-title {
+  font-family: 'Bangers', cursive;
+  font-size: 16pt; letter-spacing: 2px;
+  margin-bottom: 3mm;
+  padding: 2mm 4mm;
+  border-radius: 6px;
+  display: inline-block;
+}
+.cards-col-title.coyote-title { background: #FF8C00; color: white; }
+.cards-col-title.rr-title     { background: #4A90D9; color: white; }
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3mm;
+}
+
+/* Each card */
+.card {
+  border-radius: 10px;
+  border: 2.5px solid;
+  padding: 4mm 3mm;
+  text-align: center;
+  height: 46mm;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-coyote { background: #FFF3D4; border-color: #FF8C00; }
+.card-rr     { background: #E8F5FF; border-color: #4A90D9; }
+
+.card-big-emoji { font-size: 28pt; line-height: 1; }
+.card-name { font-family: 'Bangers', cursive; font-size: 11pt; letter-spacing: 1px; color: #222; line-height: 1.1; }
+.card-effect { font-size: 8pt; font-weight: 700; color: #444; line-height: 1.4; flex: 1; display: flex; align-items: center; padding: 1mm 0; }
+.card-cut { font-size: 5.5pt; color: #bbb; border-top: 1px dashed #ddd; padding-top: 1.5mm; width: 100%; text-align: center; }
+
+/* Divider between card cols */
+.cards-divider {
+  width: 5mm;
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.cards-divider::before {
+  content: '';
+  width: 1px; height: 80%;
+  background: #ddd;
+}
+
+/* Rules column */
+.rules-col {
+  width: 72mm;
+  flex-shrink: 0;
+  position: relative; z-index: 1;
+  padding: 5mm;
+  border-left: 2.5px solid #e8d090;
+  background: rgba(255,255,255,0.6);
+}
+
+.rules-heading {
+  font-family: 'Bangers', cursive;
+  font-size: 16pt; letter-spacing: 2px;
+  color: #e05000;
+  margin-bottom: 3mm;
+  padding-bottom: 1.5mm;
+  border-bottom: 2.5px solid #e05000;
+}
+
+.rules-step {
+  display: flex; gap: 2mm; margin-bottom: 3mm; align-items: flex-start;
+}
+.step-num {
+  background: #e05000; color: white;
+  font-family: 'Bangers', cursive;
+  font-size: 11pt; min-width: 7mm; height: 7mm;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 0.5mm;
+}
+.step-text { font-size: 7pt; font-weight: 700; line-height: 1.6; color: #333; }
+.step-text b { color: #e05000; }
+
+.win-box {
+  background: linear-gradient(135deg, #fff8d0, #ffd700);
+  border: 2.5px solid #c8a000;
+  border-radius: 8px;
+  padding: 3mm 3mm;
+  margin-top: 3mm;
+}
+.win-title {
+  font-family: 'Bangers', cursive;
+  font-size: 12pt; letter-spacing: 1.5px;
+  color: #7a5000; margin-bottom: 1.5mm;
+}
+.win-text { font-size: 6.5pt; font-weight: 700; line-height: 1.8; color: #5a3800; }
+
+.branding {
+  margin-top: 3mm;
+  background: #e05000; color: white;
+  border-radius: 8px; padding: 3mm;
+  text-align: center;
+}
+.branding-title { font-family: 'Bangers', cursive; font-size: 18pt; letter-spacing: 3px; text-shadow: 1px 1px 0 #9a3000; }
+.branding-chars { font-size: 20pt; margin: 1mm 0; }
+.branding-sub   { font-size: 5.5pt; opacity: 0.8; letter-spacing: 1px; }
+
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button onclick="window.print()">🖨️ Print Board &amp; Cards</button>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SHEET 1 — THE BOARD
+═══════════════════════════════════════════ -->
+<div class="sheet" id="board-sheet">
+
+  <!-- Left: title -->
+  <div class="title-col">
+    <div class="title-vert">BEEP BEEP!</div>
+    <div class="title-chars">🐦<br>vs<br>🐺</div>
+  </div>
+
+  <!-- Center: board grid -->
+  <div class="board-col" id="board-col">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- Right: legend + score -->
+  <div class="info-col">
+
+    <div class="info-box">
+      <div class="info-title">🗺️ LEGEND</div>
+      <div class="leg-row"><div class="leg-swatch" style="background:#FFF8E8;"></div>Open Road — move normally</div>
+      <div class="leg-row"><div class="leg-swatch" style="background:#D0F5B0;border-color:#5cb85c;"></div>🌵 Shortcut — jump ahead 3</div>
+      <div class="leg-row"><div class="leg-swatch" style="background:#FFD5C8;border-color:#e05000;"></div>🏜️ Canyon — go back 3</div>
+      <div class="leg-row"><div class="leg-swatch" style="background:#C8E8FF;border-color:#4a90d9;"></div>📦 ACME — draw a card</div>
+      <div class="leg-row"><div class="leg-swatch" style="background:#FFD700;border-color:#c8a000;"></div>🏆 FINISH — get here to win!</div>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">📋 QUICK RULES</div>
+      <div class="rules-text">
+        Roll 1 die. Move that many spaces.<br>
+        Apply the space effect.<br>
+        Play 1 card if you want.<br><br>
+        <b>🐦 Road Runner wins</b> by reaching 🏆 FINISH.<br><br>
+        <b>🐺 Coyote wins</b> by landing on Road Runner's space <b>2 times</b>. (RR goes back 3 each time.)
+      </div>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">📊 SCORE TRACKER</div>
+      <div class="score-grid">
+        <div class="score-card">
+          <div class="score-icon">🐦</div>
+          <div class="score-name">ROAD RUNNER</div>
+          <div class="score-space">Space: ____</div>
+        </div>
+        <div class="score-card">
+          <div class="score-icon">🐺</div>
+          <div class="score-name">COYOTE</div>
+          <div class="score-space">Space: ____</div>
+          <div class="score-catches">Catches: 🐾○</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box" style="font-size:6.5pt;font-weight:700;color:#555;line-height:1.7;">
+      <div class="info-title">🎒 WHAT YOU NEED</div>
+      1 regular die (d6)<br>
+      2 small tokens (coins)<br>
+      Cut out the cards below
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SHEET 2 — CARDS + RULES
+═══════════════════════════════════════════ -->
+<div class="sheet" id="cards-sheet">
+
+  <!-- Coyote cards -->
+  <div class="cards-col">
+    <div class="cards-col-title coyote-title">🐺 COYOTE'S ACME CARDS</div>
+    <div class="card-grid" id="coyote-cards"></div>
+    <div style="font-size:6pt;color:#999;margin-top:3mm;font-weight:700;">Cut out the cards above. Shuffle them. Coyote starts with 2 cards.</div>
+  </div>
+
+  <div class="cards-divider"></div>
+
+  <!-- RR cards -->
+  <div class="cards-col">
+    <div class="cards-col-title rr-title">🐦 ROAD RUNNER'S ESCAPE CARDS</div>
+    <div class="card-grid" id="rr-cards"></div>
+    <div style="font-size:6pt;color:#999;margin-top:3mm;font-weight:700;">Cut out the cards above. Shuffle them. Road Runner starts with 2 cards.</div>
+  </div>
+
+  <div class="cards-divider"></div>
+
+  <!-- Rules -->
+  <div class="rules-col">
+    <div class="rules-heading">HOW TO PLAY</div>
+
+    <div class="rules-step">
+      <div class="step-num">1</div>
+      <div class="step-text">Put both tokens on <b>space 1 (GO!)</b>. Each player draws <b>2 cards</b> from their own deck.</div>
+    </div>
+    <div class="rules-step">
+      <div class="step-num">2</div>
+      <div class="step-text">Youngest player is <b>Road Runner 🐦</b>. Other player is <b>Coyote 🐺</b>.</div>
+    </div>
+    <div class="rules-step">
+      <div class="step-num">3</div>
+      <div class="step-text"><b>Roll the die.</b> Move your token forward that many spaces along the path.</div>
+    </div>
+    <div class="rules-step">
+      <div class="step-num">4</div>
+      <div class="step-text">
+        Apply your space's effect:<br>
+        🌵 <b>Green</b> = jump ahead 3 more<br>
+        🏜️ <b>Red</b> = go back 3 spaces<br>
+        📦 <b>Blue</b> = draw 1 card from your deck
+      </div>
+    </div>
+    <div class="rules-step">
+      <div class="step-num">5</div>
+      <div class="step-text"><b>Play a card</b> (optional). Read it aloud and do what it says. Then it's gone.</div>
+    </div>
+    <div class="rules-step">
+      <div class="step-num">6</div>
+      <div class="step-text"><b>Pass the die</b> to the other player. Their turn begins!</div>
+    </div>
+
+    <div class="win-box">
+      <div class="win-title">🏆 HOW TO WIN</div>
+      <div class="win-text">
+        🐦 <b>Road Runner wins</b> by reaching the gold FINISH space (space 48)!<br><br>
+        🐺 <b>Coyote wins</b> by landing on Road Runner's exact space <b>2 times</b>! Each time counts as a catch. Road Runner slides back 3 spaces per catch.
+      </div>
+    </div>
+
+    <div class="branding">
+      <div class="branding-title">BEEP BEEP!</div>
+      <div class="branding-chars">🐦💨🐺</div>
+      <div class="branding-sub">Based on Looney Tunes characters by Warner Bros.</div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     JS: Generate board + cards
+═══════════════════════════════════════════ -->
+<script>
+// ── SPACE DEFINITIONS ──────────────────────
+const greenIdx  = new Set([5,13,21,29,37]);
+const redIdx    = new Set([8,16,24,32,40]);
+const blueIdx   = new Set([3,11,19,27,35,43]);
+
+function spaceType(i) {
+  if (i === 0)  return { cls:'sp-start',  emoji:'🏁' };
+  if (i === 47) return { cls:'sp-finish', emoji:'🏆' };
+  if (greenIdx.has(i)) return { cls:'sp-green', emoji:'🌵' };
+  if (redIdx.has(i))   return { cls:'sp-red',   emoji:'🏜️' };
+  if (blueIdx.has(i))  return { cls:'sp-blue',  emoji:'📦' };
+  return { cls:'sp-open', emoji:'💨' };
+}
+
+// ── BUILD BOARD ─────────────────────────────
+const boardCol = document.getElementById('board-col');
+const COLS = 8, ROWS = 6;
+
+for (let row = 0; row < ROWS; row++) {
+  // Build row of spaces
+  const rowEl = document.createElement('div');
+  rowEl.className = 'board-row';
+
+  const ltr = row % 2 === 0;
+  for (let c = 0; c < COLS; c++) {
+    const idx = row * COLS + (ltr ? c : COLS - 1 - c);
+    const { cls, emoji } = spaceType(idx);
+    const sp = document.createElement('div');
+    sp.className = `sp ${cls}`;
+    sp.innerHTML = `<span class="sp-num">${idx + 1}</span><span class="sp-emoji">${emoji}</span>`;
+    rowEl.appendChild(sp);
+  }
+  boardCol.appendChild(rowEl);
+
+  // Arrow between rows
+  if (row < ROWS - 1) {
+    const arrowDiv = document.createElement('div');
+    const ltrNext = row % 2 === 0;
+    arrowDiv.className = `row-arrow ${ltrNext ? 'arrow-right' : 'arrow-left'}`;
+    arrowDiv.innerHTML = `<span>${ltrNext ? '↙' : '↘'}</span>`;
+    boardCol.appendChild(arrowDiv);
+  }
+}
+
+// ── COYOTE CARDS ────────────────────────────
+const coyoteCards = [
+  { emoji:'🛼', name:'Rocket Skates',  effect:'Move forward 4 spaces!' },
+  { emoji:'🧲', name:'Giant Magnet',   effect:'Pull Road Runner back 3 spaces.' },
+  { emoji:'🌾', name:'Bird Seed',      effect:'Road Runner misses their next turn!' },
+  { emoji:'🛼', name:'Rocket Skates',  effect:'Move forward 4 spaces!' },
+  { emoji:'🧲', name:'Giant Magnet',   effect:'Pull Road Runner back 3 spaces.' },
+  { emoji:'🌾', name:'Bird Seed',      effect:'Road Runner misses their next turn!' },
+];
+
+const coyoteGrid = document.getElementById('coyote-cards');
+coyoteCards.forEach(c => {
+  const el = document.createElement('div');
+  el.className = 'card card-coyote';
+  el.innerHTML = `
+    <div class="card-big-emoji">${c.emoji}</div>
+    <div class="card-name">${c.name}</div>
+    <div class="card-effect">${c.effect}</div>
+    <div class="card-cut">✂ cut here</div>
+  `;
+  coyoteGrid.appendChild(el);
+});
+
+// ── ROAD RUNNER CARDS ───────────────────────
+const rrCards = [
+  { emoji:'💨', name:'BEEP BEEP!',   effect:'Move forward 4 spaces! Cannot be stopped.' },
+  { emoji:'🌪️', name:'Dust Devil',   effect:'Coyote misses their next turn!' },
+  { emoji:'🗺️', name:'Shortcut!',    effect:'Zoom ahead 5 spaces!' },
+  { emoji:'💨', name:'BEEP BEEP!',   effect:'Move forward 4 spaces! Cannot be stopped.' },
+  { emoji:'🌪️', name:'Dust Devil',   effect:'Coyote misses their next turn!' },
+  { emoji:'🗺️', name:'Shortcut!',    effect:'Zoom ahead 5 spaces!' },
+];
+
+const rrGrid = document.getElementById('rr-cards');
+rrCards.forEach(c => {
+  const el = document.createElement('div');
+  el.className = 'card card-rr';
+  el.innerHTML = `
+    <div class="card-big-emoji">${c.emoji}</div>
+    <div class="card-name">${c.name}</div>
+    <div class="card-effect">${c.effect}</div>
+    <div class="card-cut">✂ cut here</div>
+  `;
+  rrGrid.appendChild(el);
+});
+</script>
+</body>
+</html>

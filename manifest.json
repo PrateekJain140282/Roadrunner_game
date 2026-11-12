@@ -1,0 +1,31 @@
+{
+  "name": "Beep Beep! Road Runner Game",
+  "short_name": "Beep Beep!",
+  "description": "Road Runner vs Coyote kids board game",
+  "start_url": "./game.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#FF6820",
+  "theme_color": "#FF6820",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
